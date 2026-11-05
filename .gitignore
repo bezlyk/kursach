@@ -1,0 +1,15 @@
+.idea/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
+data/
+*.sqlite*
+*.db
+*.db-*
+*.lock
+*.log
+.DS_Store
+Thumbs.db
