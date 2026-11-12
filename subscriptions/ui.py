@@ -67,7 +67,6 @@ class Application:
         header.grid(row=0, column=0, sticky="ew")
         header.columnconfigure(0, weight=1)
         ttk.Label(header, text="Мои подписки", style="Title.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Button(header, text="Обновить", command=lambda: self.safe(self.refresh_all)).grid(row=0, column=2, sticky="e")
         ttk.Label(header, text="Личный учёт · до пяти активных сервисов · данные на вашем компьютере", style="Muted.TLabel").grid(
             row=1, column=0, columnspan=3, sticky="w", pady=(3, 16))
         self.count = tk.StringVar()
@@ -147,7 +146,7 @@ class Application:
         self.reminder_tree.tag_configure("today", foreground="#815108")
         ttk.Button(page, text="Открыть выбранную подписку", command=lambda: self.safe(self.open_reminder)).grid(
             row=2, column=0, sticky="w", pady=12)
-        ttk.Label(page, text="Напоминания появляются только при запуске и обновлении программы.\n"
+        ttk.Label(page, text="Напоминания пересчитываются при запуске и изменении данных.\n"
                   "Оплату и отключение услуги вы выполняете у поставщика самостоятельно.",
                   style="Muted.TLabel").grid(row=3, column=0, sticky="w")
 

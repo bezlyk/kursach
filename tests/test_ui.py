@@ -9,6 +9,7 @@ import main
 try:
     import tkinter as tk
     from subscriptions.dialogs import ActivationDialog, HistoryDialog, PaymentDialog, SubscriptionDialog
+    from subscriptions.date_picker import CalendarDialog
     from subscriptions.ui import Application
 except ImportError:
     tk = None
@@ -81,6 +82,60 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(self.app.estimate.get(), "250,50 руб.")
         self.assertEqual(len(self.app.tree.get_children()), 1)
         self.assertIn("Кинотеатр", self.app.details.get("1.0", "end"))
+
+    def choose_calendar_date(self, field, value):
+        def select_day():
+            pickers = [child for child in field.winfo_children()
+                       if isinstance(child, CalendarDialog) and child.winfo_viewable()]
+            if not pickers:
+                self.root.after(10, select_day)
+                return
+            picker = pickers[0]
+            picker.year_value.set(str(value.year))
+            picker.month_box.current(value.month - 1)
+            picker.month_box.event_generate("<<ComboboxSelected>>")
+            picker.day_buttons[value.day].invoke()
+        self.root.after_idle(select_day)
+        field.calendar_button.invoke()
+
+    def test_subscription_calendar_adds_and_edits_without_automatic_save(self):
+        dialog = SubscriptionDialog(self.root, self.service)
+        dialog.variables["service"].set("Кино")
+        dialog.variables["amount"].set("100")
+        self.choose_calendar_date(dialog.next_date_field, date(2028, 2, 29))
+        self.assertEqual(self.service.list_subscriptions(), [])
+        self.assertEqual(self.root.grab_current(), dialog)
+        dialog.save_button.invoke()
+        item = self.service.list_subscriptions()[0]
+        self.assertEqual(item.next_date, date(2028, 2, 29))
+        editing = SubscriptionDialog(self.root, self.service, item)
+        self.choose_calendar_date(editing.next_date_field, date(2028, 3, 31))
+        editing.save_button.invoke()
+        self.assertEqual(self.service.get_subscription(item.id).next_date, date(2028, 3, 31))
+
+    def test_payment_calendar_keeps_future_date_validation(self):
+        item = self.create()
+        dialog = PaymentDialog(self.root, self.service, item)
+        self.choose_calendar_date(dialog.actual_date_field, date(2027, 3, 11))
+        dialog.save_button.invoke()
+        self.assertIn("Фактическая дата", dialog.error.get())
+        self.assertEqual(self.service.payment_history(), ([], 0))
+        self.choose_calendar_date(dialog.actual_date_field, date(2027, 3, 9))
+        dialog.save_button.invoke()
+        payments, total = self.service.payment_history(item.id)
+        self.assertEqual((len(payments), total), (1, 30000))
+        self.assertEqual(payments[0].actual_date, date(2027, 3, 9))
+
+    def test_activation_calendar_saves_selected_next_date(self):
+        item = self.create()
+        self.service.set_active(item.id, False)
+        dialog = ActivationDialog(self.root, self.service, self.service.get_subscription(item.id))
+        self.choose_calendar_date(dialog.next_date_field, date(2027, 4, 15))
+        self.assertFalse(self.service.get_subscription(item.id).active)
+        dialog.save_button.invoke()
+        updated = self.service.get_subscription(item.id)
+        self.assertTrue(updated.active)
+        self.assertEqual(updated.next_date, date(2027, 4, 15))
 
     def test_form_error_allows_correction_and_cancel_does_not_write(self):
         dialog = SubscriptionDialog(self.root, self.service)

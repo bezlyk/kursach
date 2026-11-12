@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+from subscriptions.date_picker import DateEntry
 from subscriptions.domain import (
     PERIODS, STATUSES, StorageError, ValidationError, amount_text, format_date, format_money,
 )
@@ -25,9 +26,11 @@ class FormDialog(tk.Toplevel):
         self.bind("<Escape>", lambda event: self.destroy())
         self.protocol("WM_DELETE_WINDOW", self.destroy)
 
-    def field(self, row, label, variable, values=None):
+    def field(self, row, label, variable, values=None, date_picker=False):
         ttk.Label(self.body, text=label).grid(row=row, column=0, sticky="w", padx=(0, 14), pady=6)
-        if values is None:
+        if date_picker:
+            widget = DateEntry(self.body, variable, today=self.service.today)
+        elif values is None:
             widget = ttk.Entry(self.body, textvariable=variable, width=32)
         else:
             widget = ttk.Combobox(self.body, textvariable=variable, values=values, state="readonly", width=30)
@@ -88,7 +91,7 @@ class SubscriptionDialog(FormDialog):
         self.field(2, "Категория", self.variables["category"])
         self.field(3, "Стоимость, руб. *", self.variables["amount"])
         self.field(4, "Период оплаты *", self.variables["period"], list(PERIODS.values()))
-        self.field(5, "Следующая дата *\nДД.ММ.ГГГГ", self.variables["next_date"])
+        self.next_date_field = self.field(5, "Следующая дата *\nДД.ММ.ГГГГ", self.variables["next_date"], date_picker=True)
         if subscription:
             self.field(6, "Статус *", self.variables["active"], list(STATUSES.values()))
         else:
@@ -136,7 +139,7 @@ class PaymentDialog(FormDialog):
         ttk.Label(self.body, text=f"Плановая дата: {format_date(subscription.next_date)}").grid(
             row=1, column=0, columnspan=2, sticky="w", pady=6)
         self.field(2, "Сумма, руб. *", self.amount)
-        self.field(3, "Фактическая дата *\nДД.ММ.ГГГГ", self.actual_date)
+        self.actual_date_field = self.field(3, "Фактическая дата *\nДД.ММ.ГГГГ", self.actual_date, date_picker=True)
         ttk.Label(self.body, text="Подтвердите уже выполненную оплату. Программа не списывает деньги.\n"
                   "Следующая дата сдвинется на один период от плановой даты.",
                   wraplength=470, style="Muted.TLabel").grid(row=4, column=0, columnspan=2, sticky="w", pady=12)
@@ -156,7 +159,7 @@ class ActivationDialog(FormDialog):
         self.next_date = tk.StringVar(value=format_date(subscription.next_date))
         ttk.Label(self.body, text=subscription.service, style="Title.TLabel", wraplength=450).grid(
             row=0, column=0, columnspan=2, sticky="w", pady=12)
-        self.field(1, "Следующая дата *\nДД.ММ.ГГГГ", self.next_date)
+        self.next_date_field = self.field(1, "Следующая дата *\nДД.ММ.ГГГГ", self.next_date, date_picker=True)
         ttk.Label(self.body, text="Проверьте дату перед возобновлением учёта.\n"
                   "Статус в программе не меняет подписку у поставщика.",
                   style="Muted.TLabel").grid(row=2, column=0, columnspan=2, sticky="w", pady=12)
